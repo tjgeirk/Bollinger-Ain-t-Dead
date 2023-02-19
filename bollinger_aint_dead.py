@@ -118,7 +118,7 @@ async def main():
             positions = await exchange.fetch_positions()
             top_gainers = [x['symbol'] for x in markets][:PAIRLIST_LENGTH]
             open_positions = [x['symbol'] for x in positions]
-            open_orders = [x['symbol'] for x in await exchange.fetch_open_orders(params={'stop': True})]
+            open_orders = [x['symbol'] for x in await exchange.fetch_open_orders()]
 
             tasks = [asyncio.create_task(place_orders(
                 coin, exchange)) for coin in top_gainers if coin not in (open_positions or open_orders)]
