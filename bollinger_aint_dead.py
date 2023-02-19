@@ -47,38 +47,38 @@ async def set_targets(exchange, symbol):
     last_middle_band = price_data['middle_band'].iloc[-1]
     last_lower_band = price_data['lower_band'].iloc[-1]
     last_upper_band = price_data['upper_band'].iloc[-1]
-    last_ema200 = price_data['ema200'].iloc[-1]
-    trend_direction = 'Up' if last_close > last_middle_band > last_ema200 else 'Down' if last_close < last_middle_band < last_ema200 else 'None'
+    ema200 = price_data['ema200'].iloc[-1]
+    trend_direction = 'Up' if last_close > last_middle_band else 'Down' if last_close < last_middle_band
     is_trending = abs(last_close - last_middle_band) > abs(last_middle_band - last_lower_band)
 
     if is_trending:
-        buy_target, sell_target = (last_middle_band, last_upper_band) if trend_direction == 'Up' else (last_lower_band, last_middle_band) if trend_direction == 'Down' else (last_lower_band, last_upper_band)
+        buy_target, sell_target = (last_middle_band, last_upper_band) if trend_direction == 'Up' else (last_lower_band, last_middle_band) 
     else:
         buy_target, sell_target = (last_lower_band, last_upper_band)
 
-    return buy_target, sell_target, last_close
+    return buy_target, sell_target, last_close, ema200
 
 
 async def place_orders(symbol, exchange):
-    buy_target, sell_target, last_close = await set_targets(exchange, symbol)
+    buy_target, sell_target, last_close, ema200 = await set_targets(exchange, symbol)
     balance = (await exchange.fetch_balance())['free']['USDT']
     lever = min(exchange.markets[symbol]['info']['maxLeverage'], MAX_LEVERAGE)
     long_qty = max(1, (balance * lever / buy_target) * INITIAL_RISK)
     short_qty = max(1, (balance * lever / sell_target) * INITIAL_RISK)
 
-    if last_close <= buy_target:
+    if ema200 <= last_close <= buy_target:
         print(f'Placing long order for {symbol} at {buy_target}...')
         await exchange.create_limit_order(
             symbol, 'buy', long_qty, buy_target, {'leverage': lever})
 
-    if last_close >= sell_target:
+    if ema200 >= last_close >= sell_target:
         print(f'Placing short order for {symbol} at {sell_target}...')
         await exchange.create_limit_order(
             symbol, 'sell', short_qty, sell_target, {'leverage': lever})
 
 
 async def manage_positions(x, open_orders):
-    buy_target, sell_target, _ = await set_targets(
+    buy_target, sell_target, ema200 = await set_targets(
         exchange, x['symbol'])
 
     if x['symbol'] not in open_orders:
@@ -93,10 +93,10 @@ async def manage_positions(x, open_orders):
             await exchange.create_limit_order(
                 x['symbol'], 'buy', x['contracts'], buy_target, {'closeOrder': True})
 
-    if x['side'] == 'long' and sell_target <= x['liquidationPrice']:
+    if x['side'] == 'long' and buy_target <= x['liquidationPrice']:
         await exchange.create_market_order(x['symbol'], 'sell', x['contracts'], None, {'closeOrder': True})
 
-    elif x['side'] == 'short' and buy_target >= x['liquidationPrice']:
+    elif x['side'] == 'short' and sell_target >= x['liquidationPrice']:
         await exchange.create_market_order(x['symbol'], 'buy', x['contracts'], None, {'closeOrder': True})
 
 
