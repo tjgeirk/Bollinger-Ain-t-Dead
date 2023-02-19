@@ -1,2 +1,2 @@
-# Bollinger-Ain-t-Dead
-Kucoin Futures Bot
+# Bollinger Ain't Dead
+## Kucoin Futures Bot
