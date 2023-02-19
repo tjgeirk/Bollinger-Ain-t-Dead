@@ -40,17 +40,16 @@ async def set_targets(exchange, symbol):
     price_data['middle_band'] = bands.bollinger_mavg()
     price_data['lower_band'] = bands.bollinger_lband()
 
-    last_close = price_data['Close'].iloc[-1]
+   last_close = price_data['Close'].iloc[-1]
     last_middle_band = price_data['middle_band'].iloc[-1]
     last_lower_band = price_data['lower_band'].iloc[-1]
     last_upper_band = price_data['upper_band'].iloc[-1]
-    trend_direction = 'Up' if last_close > last_middle_band else 'Down'
-    is_trending = abs(
-        last_close - last_middle_band) > abs(last_middle_band - last_lower_band)
+    last_ema200 = price_data['ema200'].iloc[-1]
+    trend_direction = 'Up' if last_close > last_middle_band > last_ema200 else 'Down' if last_close < last_middle_band < last_ema200 else 'None'
+    is_trending = abs(last_close - last_middle_band) > abs(last_middle_band - last_lower_band)
 
     if is_trending:
-        buy_target, sell_target = (last_middle_band, last_upper_band) if trend_direction == 'Up' else (
-            last_lower_band, last_middle_band)
+        buy_target, sell_target = (last_middle_band, last_upper_band) if trend_direction == 'Up' else (last_lower_band, last_middle_band) if trend_direction == 'Down' else (last_lower_band, last_upper_band)
     else:
         buy_target, sell_target = (last_lower_band, last_upper_band)
 
