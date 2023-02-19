@@ -4,8 +4,8 @@
 ##
 ##
 
-
 import ta.volatility as vol
+import pandas_ta as ta
 import pandas as pd
 import ccxt.async_support as ccxt
 import asyncio
@@ -18,7 +18,9 @@ exchange = ccxt.kucoinfutures({
     'adjustForTimeDifference': True,
 })
 
-PAIRLIST_LENGTH = 10
+LOOKBACK = 20
+STANDARD_DEVIATIONS = 2
+PAIRLIST_LENGTH = 5
 TIMEFRAME = '15m'
 MAX_LEVERAGE = 5
 INITIAL_RISK = .5/PAIRLIST_LENGTH
@@ -35,12 +37,13 @@ async def get_price_data(exchange, symbol):
 
 async def set_targets(exchange, symbol):
     price_data = await get_price_data(exchange, symbol)
-    bands = vol.BollingerBands(price_data['Close'], 20, 1)
+    bands = vol.BollingerBands(price_data['Close'], LOOKBACK, STANDARD_DEVIATIONS)
     price_data['upper_band'] = bands.bollinger_hband()
     price_data['middle_band'] = bands.bollinger_mavg()
     price_data['lower_band'] = bands.bollinger_lband()
+    price_data['ema200'] = ta.ema(price_data['Close'], 200)
 
-   last_close = price_data['Close'].iloc[-1]
+    last_close = price_data['Close'].iloc[-1]
     last_middle_band = price_data['middle_band'].iloc[-1]
     last_lower_band = price_data['lower_band'].iloc[-1]
     last_upper_band = price_data['upper_band'].iloc[-1]
